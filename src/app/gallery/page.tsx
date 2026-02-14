@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Plus, Trash2, AlertTriangle, X } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, AlertTriangle, X, Crown } from 'lucide-react';
 import { useCollection } from '@/context/CollectionContext';
 import ObjectViewer from '@/components/ObjectViewer';
 
@@ -40,15 +40,26 @@ export default function Gallery() {
                     </Link>
                     <h1 className="text-2xl font-bold tracking-widest text-charcoal uppercase">Gallery</h1>
                 </div>
-                <Link href="/upload">
-                    <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        className="flex items-center gap-2 px-4 py-2 bg-charcoal text-white rounded-full text-sm font-medium"
-                    >
-                        <Plus className="w-4 h-4" />
-                        <span>Add Item</span>
-                    </motion.div>
-                </Link>
+                <div className="flex items-center gap-4">
+                    <Link href="/upload">
+                        <motion.div
+                            whileHover={{ scale: 1.05 }}
+                            className="flex items-center gap-2 px-4 py-2 bg-charcoal text-white rounded-full text-sm font-medium"
+                        >
+                            <Plus className="w-4 h-4" />
+                            <span>Add Item</span>
+                        </motion.div>
+                    </Link>
+                    <Link href="/pricing">
+                        <motion.div
+                            whileHover={{ scale: 1.05 }}
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-charcoal/10 rounded-full text-sm font-medium shadow-sm hover:shadow-md transition-shadow"
+                        >
+                            <Crown className="w-4 h-4 text-yellow-500" />
+                            <span className="text-charcoal">Upgrade</span>
+                        </motion.div>
+                    </Link>
+                </div>
             </header>
 
             {/* Category Tabs */}
