@@ -2,18 +2,20 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Share2, Info, Lightbulb, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Share2, Info, Lightbulb, ChevronDown, ChevronUp, Trash2, AlertTriangle } from 'lucide-react';
 import { useCollection } from '@/context/CollectionContext';
 import ObjectViewer from '@/components/ObjectViewer';
 
 
 export default function DetailView() {
     const params = useParams();
-    const { getItemById } = useCollection();
+    const router = useRouter();
+    const { getItemById, deleteItem } = useCollection();
     const item = getItemById(params.id as string);
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     if (!item) {
         return (
@@ -25,6 +27,11 @@ export default function DetailView() {
             </div>
         );
     }
+
+    const handleDelete = () => {
+        deleteItem(item.id);
+        router.push('/gallery');
+    };
 
     return (
         <main className="relative h-screen w-full bg-porcelain overflow-hidden">
@@ -38,6 +45,12 @@ export default function DetailView() {
                     </Link>
                 </div>
                 <div className="pointer-events-auto flex gap-3">
+                    <button
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="p-2 rounded-full bg-white/50 backdrop-blur-sm shadow-sm hover:bg-red-50 transition-colors group"
+                    >
+                        <Trash2 className="w-5 h-5 text-charcoal group-hover:text-red-500 transition-colors" />
+                    </button>
                     <button className="p-2 rounded-full bg-white/50 backdrop-blur-sm shadow-sm">
                         <Share2 className="w-5 h-5 text-charcoal" />
                     </button>
@@ -53,26 +66,23 @@ export default function DetailView() {
                     interactive={true}
                     autoRotate={false}
                 />
-
-
             </div>
 
-            {/* Info Panel - Desktop Left and Mobile Bottom */}
+            {/* Info Panel */}
             <motion.div
                 initial={{ opacity: 0, y: 50 }}
-                animate={{ 
-                    opacity: 1, 
+                animate={{
+                    opacity: 1,
                     y: 0,
                 }}
                 transition={{ delay: 0.5, duration: 0.8 }}
                 className="absolute bottom-8 left-0 w-full md:left-8 md:w-80 md:bottom-8 z-20 px-4 md:px-0"
             >
-                <motion.div 
+                <motion.div
                     layout
                     className="relative bg-white/70 backdrop-blur-xl rounded-[2rem] shadow-2xl border border-white/50 overflow-hidden"
                 >
-                    {/* Toggle Button */}
-                    <button 
+                    <button
                         onClick={() => setIsCollapsed(!isCollapsed)}
                         className="absolute top-6 right-6 p-2 rounded-full bg-charcoal/5 hover:bg-charcoal/10 transition-colors z-30"
                     >
@@ -126,6 +136,47 @@ export default function DetailView() {
                     </div>
                 </motion.div>
             </motion.div>
+
+            {/* Delete Confirmation Overlay */}
+            <AnimatePresence>
+                {showDeleteConfirm && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 z-[100] flex items-center justify-center p-6 bg-charcoal/20 backdrop-blur-md"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="bg-white rounded-[2.5rem] p-10 max-w-sm w-full shadow-2xl text-center"
+                        >
+                            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <AlertTriangle className="w-8 h-8 text-red-500" />
+                            </div>
+                            <h2 className="text-2xl font-bold text-charcoal mb-3">Remove Item?</h2>
+                            <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+                                This will permanently remove <span className="font-bold text-charcoal">{item.name}</span> from your collection. This action cannot be undone.
+                            </p>
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    onClick={handleDelete}
+                                    className="w-full py-4 bg-red-500 hover:bg-red-600 text-white rounded-2xl font-bold transition-colors shadow-lg shadow-red-200"
+                                >
+                                    Delete Item
+                                </button>
+                                <button
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    className="w-full py-4 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-2xl font-bold transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Interaction Hint */}
             <motion.div

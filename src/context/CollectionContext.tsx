@@ -20,6 +20,8 @@ export interface Item {
 interface CollectionContextType {
   items: Item[];
   addItem: (item: Omit<Item, 'id' | 'date'>) => void;
+  deleteItem: (id: string) => void;
+  deleteCategory: (category: string) => void;
   getItemById: (id: string) => Item | undefined;
   getCategories: () => string[];
 }
@@ -87,6 +89,14 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
     setItems((prev) => [item, ...prev]);
   };
 
+  const deleteItem = (id: string) => {
+    setItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const deleteCategory = (category: string) => {
+    setItems((prev) => prev.filter((item) => item.category !== category));
+  };
+
   const getItemById = (id: string) => items.find((item) => item.id === id);
 
   const getCategories = () => {
@@ -94,7 +104,7 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <CollectionContext.Provider value={{ items, addItem, getItemById, getCategories }}>
+    <CollectionContext.Provider value={{ items, addItem, deleteItem, deleteCategory, getItemById, getCategories }}>
       {children}
     </CollectionContext.Provider>
   );

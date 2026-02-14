@@ -3,13 +3,14 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, AlertTriangle, X } from 'lucide-react';
 import { useCollection } from '@/context/CollectionContext';
 import ObjectViewer from '@/components/ObjectViewer';
 
 export default function Gallery() {
-    const { items } = useCollection();
+    const { items, deleteCategory } = useCollection();
     const [activeCategory, setActiveCategory] = useState('All');
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const categories = useMemo(() => {
         const cats = ['All', ...Array.from(new Set(items.map(item => item.category)))];
@@ -21,8 +22,14 @@ export default function Gallery() {
         return items.filter(item => item.category === activeCategory);
     }, [items, activeCategory]);
 
+    const handleDeleteCategory = () => {
+        deleteCategory(activeCategory);
+        setActiveCategory('All');
+        setShowDeleteConfirm(false);
+    };
+
     return (
-        <main className="min-h-screen bg-porcelain p-8 md:p-24 flex flex-col items-center">
+        <main className="min-h-screen bg-porcelain p-8 md:p-24 flex flex-col items-center relative">
             {/* Header */}
             <header className="w-full max-w-6xl flex justify-between items-center mb-8">
                 <div className="flex items-center gap-4">
@@ -45,18 +52,31 @@ export default function Gallery() {
             </header>
 
             {/* Category Tabs */}
-            <div className="w-full max-w-6xl mb-12 flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+            <div className="w-full max-w-6xl mb-12 flex gap-4 overflow-x-auto pb-4 scrollbar-hide items-center">
                 {categories.map((cat) => (
-                    <button
-                        key={cat}
-                        onClick={() => setActiveCategory(cat)}
-                        className={`px-6 py-2 rounded-full text-xs font-bold tracking-widest uppercase transition-all whitespace-nowrap ${activeCategory === cat
-                            ? 'bg-charcoal text-white shadow-lg'
-                            : 'bg-white text-gray-400 hover:text-charcoal border border-gray-100'
-                            }`}
-                    >
-                        {cat}
-                    </button>
+                    <div key={cat} className="flex items-center gap-2">
+                        <button
+                            onClick={() => setActiveCategory(cat)}
+                            className={`px-6 py-2 rounded-full text-xs font-bold tracking-widest uppercase transition-all whitespace-nowrap flex items-center gap-2 ${activeCategory === cat
+                                ? 'bg-charcoal text-white shadow-lg'
+                                : 'bg-white text-gray-400 hover:text-charcoal border border-gray-100'
+                                }`}
+                        >
+                            {cat}
+                        </button>
+
+                        {activeCategory === cat && cat !== 'All' && (
+                            <motion.button
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                onClick={() => setShowDeleteConfirm(true)}
+                                className="p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
+                                title="Delete this category"
+                            >
+                                <Trash2 className="w-3.5 h-3.5" />
+                            </motion.button>
+                        )}
+                    </div>
                 ))}
             </div>
 
@@ -106,6 +126,47 @@ export default function Gallery() {
                     </div>
                 )}
             </div>
+
+            {/* Category Delete Confirmation Overlay */}
+            <AnimatePresence>
+                {showDeleteConfirm && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-charcoal/20 backdrop-blur-md"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="bg-white rounded-[2.5rem] p-10 max-w-sm w-full shadow-2xl text-center"
+                        >
+                            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <AlertTriangle className="w-8 h-8 text-red-500" />
+                            </div>
+                            <h2 className="text-2xl font-bold text-charcoal mb-3">Delete Category?</h2>
+                            <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+                                This will permanently remove the <span className="font-bold text-charcoal">{activeCategory}</span> category and <span className="font-bold text-charcoal">all items</span> within it.
+                            </p>
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    onClick={handleDeleteCategory}
+                                    className="w-full py-4 bg-red-500 hover:bg-red-600 text-white rounded-2xl font-bold transition-colors shadow-lg shadow-red-200"
+                                >
+                                    Delete All Items
+                                </button>
+                                <button
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    className="w-full py-4 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-2xl font-bold transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </main>
     );
 }
