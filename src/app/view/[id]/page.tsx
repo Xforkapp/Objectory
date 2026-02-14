@@ -1,12 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Share2, Info, Lightbulb, ChevronDown, ChevronUp, Trash2, AlertTriangle } from 'lucide-react';
+import {
+    ArrowLeft, Share2, Info, Lightbulb, ChevronDown, ChevronUp, Trash2,
+    AlertTriangle, Video, Camera, Sparkles, Loader2
+} from 'lucide-react';
 import { useCollection } from '@/context/CollectionContext';
-import ObjectViewer from '@/components/ObjectViewer';
+import ObjectViewer, { ObjectViewerRef } from '@/components/ObjectViewer';
+import CinematicPreview from '@/components/CinematicPreview';
 
 
 export default function DetailView() {
@@ -14,8 +18,16 @@ export default function DetailView() {
     const router = useRouter();
     const { getItemById, deleteItem } = useCollection();
     const item = getItemById(params.id as string);
+
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    // Recording States
+    const viewerRef = useRef<ObjectViewerRef>(null);
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingProgress, setRecordingProgress] = useState(0);
+    const [recordedVideoUrl, setRecordedVideoUrl] = useState<string | null>(null);
+    const [showPreview, setShowPreview] = useState(false);
 
     if (!item) {
         return (
@@ -33,6 +45,37 @@ export default function DetailView() {
         router.push('/gallery');
     };
 
+    const startCinematicCapture = async () => {
+        if (!viewerRef.current) return;
+
+        setIsRecording(true);
+        setRecordingProgress(0);
+
+        // 5秒間の撮影
+        const duration = 5000;
+        const interval = 100;
+        let elapsed = 0;
+
+        const progressTimer = setInterval(() => {
+            elapsed += interval;
+            setRecordingProgress(Math.min((elapsed / duration) * 100, 100));
+        }, interval);
+
+        try {
+            const blob = await viewerRef.current.startRecording(duration);
+            const url = URL.createObjectURL(blob);
+            setRecordedVideoUrl(url);
+            setShowPreview(true);
+        } catch (error) {
+            console.error("Recording failed", error);
+            alert("Recording failed. Please try again.");
+        } finally {
+            clearInterval(progressTimer);
+            setIsRecording(false);
+            setRecordingProgress(0);
+        }
+    };
+
     return (
         <main className="relative h-screen w-full bg-porcelain overflow-hidden">
             {/* Header Overlay */}
@@ -46,6 +89,19 @@ export default function DetailView() {
                 </div>
                 <div className="pointer-events-auto flex gap-3">
                     <button
+                        onClick={startCinematicCapture}
+                        disabled={isRecording}
+                        className={`p-2 rounded-full backdrop-blur-sm shadow-sm transition-all group ${isRecording ? 'bg-charcoal text-white ring-4 ring-charcoal/10' : 'bg-white/50 text-charcoal hover:bg-white'
+                            }`}
+                        title="Cinematic Capture"
+                    >
+                        {isRecording ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                            <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                        )}
+                    </button>
+                    <button
                         onClick={() => setShowDeleteConfirm(true)}
                         className="p-2 rounded-full bg-white/50 backdrop-blur-sm shadow-sm hover:bg-red-50 transition-colors group"
                     >
@@ -57,13 +113,40 @@ export default function DetailView() {
                 </div>
             </header>
 
+            {/* Recording Progress Bar */}
+            <AnimatePresence>
+                {isRecording && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="absolute top-24 left-1/2 -translate-x-1/2 z-[60] flex flex-col items-center gap-2"
+                    >
+                        <div className="flex items-center gap-3 px-6 py-3 bg-charcoal text-white rounded-full shadow-2xl">
+                            <Sparkles className="w-4 h-4 text-yellow-400 animate-pulse" />
+                            <span className="text-[10px] font-bold tracking-[0.2em] uppercase">Cinematic Recording in progress</span>
+                            <span className="text-[10px] font-mono">{Math.round(recordingProgress)}%</span>
+                        </div>
+                        <div className="w-64 h-1 bg-charcoal/10 rounded-full overflow-hidden">
+                            <motion.div
+                                className="h-full bg-charcoal"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${recordingProgress}%` }}
+                            />
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* 3D Canvas */}
-            <div className="absolute inset-0 z-10 cursor-grab active:cursor-grabbing">
+            <div className={`absolute inset-0 z-10 cursor-grab active:cursor-grabbing transition-all duration-1000 ${isRecording ? 'scale-90 opacity-90' : 'scale-100 opacity-100'
+                }`}>
                 <ObjectViewer
+                    ref={viewerRef}
                     src={item.glbSrc}
                     poster={item.poster}
                     name={item.name}
-                    interactive={true}
+                    interactive={!isRecording}
                     autoRotate={false}
                 />
             </div>
@@ -72,15 +155,15 @@ export default function DetailView() {
             <motion.div
                 initial={{ opacity: 0, y: 50 }}
                 animate={{
-                    opacity: 1,
-                    y: 0,
+                    opacity: isRecording ? 0 : 1,
+                    y: isRecording ? 20 : 0,
                 }}
                 transition={{ delay: 0.5, duration: 0.8 }}
-                className="absolute bottom-8 left-0 w-full md:left-8 md:w-80 md:bottom-8 z-20 px-4 md:px-0"
+                className="absolute bottom-8 left-0 w-full md:left-8 md:w-80 md:bottom-8 z-20 px-4 md:px-0 pointer-events-none"
             >
                 <motion.div
                     layout
-                    className="relative bg-white/70 backdrop-blur-xl rounded-[2rem] shadow-2xl border border-white/50 overflow-hidden"
+                    className="relative bg-white/70 backdrop-blur-xl rounded-[2rem] shadow-2xl border border-white/50 overflow-hidden pointer-events-auto"
                 >
                     <button
                         onClick={() => setIsCollapsed(!isCollapsed)}
@@ -136,6 +219,14 @@ export default function DetailView() {
                     </div>
                 </motion.div>
             </motion.div>
+
+            {/* Video Preview Modal */}
+            <CinematicPreview
+                videoUrl={recordedVideoUrl}
+                isOpen={showPreview}
+                onClose={() => setShowPreview(false)}
+                itemName={item.name}
+            />
 
             {/* Delete Confirmation Overlay */}
             <AnimatePresence>
